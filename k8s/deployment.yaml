@@ -1,0 +1,108 @@
+# Kubernetes manifest for `agenticprotocol`
+# - Replace `image:` with your container registry (e.g. ghcr.io/<org>/agenticprotocol:tag)
+# - Update `host` in the Ingress to your domain and configure TLS as needed
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agenticprotocol
+  labels:
+    app: agenticprotocol
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: agenticprotocol
+  template:
+    metadata:
+      labels:
+        app: agenticprotocol
+    spec:
+      containers:
+        - name: agenticprotocol
+          image: ghcr.io/<your-username>/agenticprotocol:latest # <-- replace with your image
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: "production"
+            - name: PORT
+              value: "3000"
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agenticprotocol
+spec:
+  selector:
+    app: agenticprotocol
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agenticprotocol-ingress
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-buffering: "off"
+spec:
+  rules:
+    - host: example.com # <-- replace with your domain
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: agenticprotocol
+                port:
+                  number: 80
+
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: agenticprotocol-hpa
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: agenticprotocol
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 60

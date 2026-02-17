@@ -1,0 +1,15 @@
+node_modules
+.next
+.next/cache
+.next/trace
+dist
+build
+.env
+.env.local
+.vscode
+.git
+.gitignore
+Dockerfile
+docker-compose*
+README.md
+*.log
